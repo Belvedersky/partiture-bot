@@ -1,0 +1,26 @@
+{
+  "name": "partiture-telegram",
+  "version": "0.0.3",
+  "description": "A simple Node app with SQLite and Telegraf to save and recieve voice with partiture.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "pug": "^2.0.4",
+    "sqlite3": "^4.2.0",
+    "telegraf": "^3.38.0"
+  },
+  "engines": {
+    "node": "12.x"
+  },
+  "license": "MIT",
+  "keywords": [
+    "node",
+    "glitch",
+    "express",
+    "audio",
+    "telegraf"
+  ]
+}

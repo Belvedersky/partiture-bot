@@ -1,0 +1,34 @@
+{
+  "bot": {
+    "start": "Бла бла бла это проект бла бла бла \nhttp://socks-studio.com что бы бла бла бла надо написать описание \nhttps://instinctive-autumn-velvet.glitch.me \nкак работает что делать что бы отправить свой войс\nпросто запишите 🎙аудиосообщение",
+    "help": "Тут помощь бла бла\nбла бла бла бла бла бла\nбла бла бла бла бла бла\nбла бла бла бла бла бла\nбла бла бла бла\nhttp://socks-studio.com/2015/10/05/the-beauty-of-indeterminacy-graphic-scores-from-treatise-by-cornelius-cardew/",
+    "partiture": "Ищем для вас партитуру...",
+    "save": "Cпасибо! Ваш войс сохранен!",
+    "keyboard":{
+      "random": "Cлучайное сообщение 🎙",
+      "partiture": "Получить партитруру 🎼",
+      "help": "Помощь ✋🏻"
+    },
+    "error": {
+      "db": "Произошла ошибка!",
+      "duration_min": "Слишком короткое сообщение, давайте дольше",
+      "duration_max": "Ого! это слишком много, давайте чуть меньше"
+    }
+  },
+  "partiture": [
+    "https://sun9-39.userapi.com/QJgrgrhocV2mNA9JzyGFpZGOszJu-DpQrAtMaA/TcbfxiWCMAc.jpg",
+    "http://socks-studio.com/img/blog/Treatise-01.jpg",
+    "http://socks-studio.com/img/blog/Treatise-02.jpg",
+    "http://socks-studio.com/img/blog/Treatise-04.jpg",
+    "http://socks-studio.com/img/blog/Treatise-05.jpg"
+  ],
+  "sql": {
+    "init": "CREATE TABLE Voices (id INTEGER PRIMARY KEY AUTOINCREMENT, voice TEXT)",
+    "add": "INSERT INTO Voices (voice) VALUES (?)",
+    "random": "SELECT * FROM Voices ORDER BY RANDOM() LIMIT 1;"
+  },
+  "convert": "ffmpeg -y -i public/voice.oga public/voice.",
+  "stream": {
+    "buffer": 2
+  }
+}
