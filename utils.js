@@ -32,3 +32,8 @@ const convert = command => {
   });
 };
 exports.convert = convert;
+
+const randomImage = (i) => {
+  return Math.floor(Math.random() * i);
+}
+exports.randomImage = randomImage;

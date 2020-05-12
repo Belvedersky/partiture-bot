@@ -3,6 +3,7 @@ dependencies:
   pug: 2.0.4
   sqlite3: 4.2.0
   telegraf: 3.38.0
+  telegraf-session-sqlite: 1.0.6
 packages:
   /@types/babel-types/7.0.7:
     dev: false
@@ -1145,6 +1146,10 @@ packages:
       node: '>=4.5'
     resolution:
       integrity: sha512-w2VwSrBoHa5BsSyH+KxEqeQBAllHhccyMFVHtGtdMpF4W7IRWfZjFiQceJPChOeTsSDVUpER2T8FA93pr0L+QA==
+  /telegraf-session-sqlite/1.0.6:
+    dev: false
+    resolution:
+      integrity: sha1-xCowTSnEl9DuBmeXMPgPIWMVco8=
   /telegraf/3.38.0:
     dependencies:
       debug: 4.1.1
@@ -1283,3 +1288,4 @@ specifiers:
   pug: ^2.0.4
   sqlite3: ^4.2.0
   telegraf: ^3.38.0
+  telegraf-session-sqlite: ^1.0.1
