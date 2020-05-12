@@ -10,11 +10,13 @@
     "express": "^4.17.1",
     "pug": "^2.0.4",
     "sqlite3": "^4.2.0",
-    "telegraf": "^3.38.0"
+    "telegraf": "^3.38.0",
+    "telegraf-session-sqlite": "^1.0.1"
   },
   "engines": {
     "node": "12.x"
   },
+  "repository": "github:Belvedersky/partiture-bot",
   "license": "MIT",
   "keywords": [
     "node",
