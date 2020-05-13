@@ -2,16 +2,6 @@
 const fs = require("fs");
 const getStat = require("util").promisify(fs.stat);
 
-// https://expressjs.com/ru
-// Сервер
-const express = require("express");
-const bodyParser = require("body-parser");
-const app = express();
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-app.use(express.static("public"));
-app.set("view engine", "pug");
-
 // Скачивание и настройки
 const { download, convert, randomImage } = require("./utils");
 const settings = JSON.parse(fs.readFileSync("response.json"));
@@ -31,6 +21,17 @@ const telegram = new Telegram(process.env.TOKEN);
 
 // app.use(bot.webhookCallback('/secret-path'))
 // bot.telegram.setWebhook('https://instinctive-autumn-velvet.glitch.me/secret-path')
+
+const express = require("express");
+const bodyParser = require("body-parser");
+const app = express();
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(express.static("public"));
+app.set("view engine", "pug");
+// app.use(bot.webhookCallback('/secret-path'))
+// bot.telegram.setWebhook('https://instinctive-autumn-velvet.glitch.me/secret-path')
+
 
 //Клавиатуры
 const {
@@ -72,7 +73,7 @@ const greeterScene = new Scene("greeter");
 stage.register(greeterScene);
 
 greeterScene.enter(ctx => {
-  console.log(ctx.scene.state);
+  //console.log(ctx.scene.state);
   ctx.replyWithHTML(`Привет, ${ctx.chat.first_name}!\n`);
   ctx.replyWithChatAction("typing");
   let i = 0;
@@ -114,7 +115,7 @@ greeterScene.hears("exit", ctx => {
 });
 
 greeterScene.on(["text", "media", "sticker"], ctx => {
-  telegram.deleteMessage(ctx.chat.id, ctx.update.message.message_id);
+  // telegram.deleteMessage(ctx.chat.id, ctx.update.message.message_id);
   ctx.reply("Пожалуйста ответьте на пользовательское соглашение");
 });
 
@@ -168,7 +169,7 @@ sendVoice.on("voice", ctx => {
             ctx.reply(settings.bot.error.db);
           } else {
             ctx.scene.state.voice = ctx.message.voice.file_id;
-            console.log(ctx.scene.state);
+            //console.log(ctx.scene.state);
             ctx.reply(
               settings.bot.save,
               Extra.HTML().markup(m =>
@@ -206,7 +207,7 @@ sendVoice.hears(settings.bot.keyboard.mainMenu, ctx => {
 });
 
 sendVoice.on(["text", "media", "sticker", "document"], ctx => {
-  telegram.deleteMessage(ctx.chat.id, ctx.update.message.message_id);
+  //telegram.deleteMessage(ctx.chat.id, ctx.update.message.message_id);
   ctx.reply("Пожалуйста отправьте голосовое сообщение", exitKeyboard);
 });
 
@@ -218,6 +219,7 @@ stage.register(rootScene);
 
 // Отправка случайного войса
 rootScene.hears(settings.bot.keyboard.randomVoice, (ctx, next) => {
+  ctx.replyWithChatAction("upload_voice");
   ctx.scene.state.media ? false : ctx.scene.state.media;
   const sql = `SELECT * FROM Voices WHERE image IS NOT NULL ${ctx.scene.state.media ? "AND id != "+ ctx.scene.state.media : " "} ORDER BY RANDOM() LIMIT 1;`;
   db.each( sql, (err, row) => { 
@@ -226,12 +228,10 @@ rootScene.hears(settings.bot.keyboard.randomVoice, (ctx, next) => {
     ctx.replyWithPhoto({ url: row.image })
       .then(() => {
         ctx.replyWithVoice(row.voice,{
-          caption: row.username ? `@${row.username}` : settings.bot.voice.text,
+          caption: row.username ? `@${row.username}` : " ", //settings.bot.voice.text,
         })
       });
-    console.log(
-      `Send ${row.voice} to ${ctx.chat.first_name} ${ctx.chat.last_name}`
-    );
+    // console.log(`Send ${row.voice} to ${ctx.chat.first_name} ${ctx.chat.last_name}`);
   });
 });
 
@@ -309,12 +309,12 @@ rootScene.on("text", ctx => ctx.reply("Круто! но я ничего не п�
 bot.use(session(options));
 bot.use(stage.middleware(options));
 
-bot.use(async (ctx, next) => {
-  const start = new Date();
-  await next();
-  const ms = new Date() - start;
-  console.log("Ответ отправлен за %sms", ms);
-});
+// bot.use(async (ctx, next) => {
+//   const start = new Date();
+//   await next();
+//   const ms = new Date() - start;
+//   console.log("Ответ отправлен за %sms", ms);
+// });
 
 // start
 bot.start(ctx => ctx.scene.enter("greeter"));
@@ -324,6 +324,11 @@ bot.startPolling();
 bot.launch();
 
 /// Сервер
+//bot.telegram.setWebhook('https://instinctive-autumn-velvet.glitch.me/secret-path')
+// bot.telegram.startWebhook('/secret-path', null, 3000);
+
+// https://expressjs.com/ru
+// Сервер
 
 /// Главная страница
 app.get("/", (req, res) => {
@@ -345,10 +350,12 @@ app.get("/randomize", (req, res) => {
   });
 });
 
+
 /// Получаем все партитуры и ссылки на них для прослушивания
 /// Что бы прослушать надо открыть страницу через vpn так как
 /// там идет скачиваение из апи телеги я рекомендую браузер опера
 app.get("/voices", (req, res) => {
+  // console.log(req.headers);
   res.send("ok!");
 });
 
@@ -365,7 +372,7 @@ const buffer = settings.stream.buffer;
 app.get("/audio", async (req, res) => {
   const filePath = `${__dirname}/public/voice.oga`;
   const stat = await getStat(filePath);
-  console.log(stat);
+  //console.log(stat);
 
   // В заголовок указываем что это аудио
   res.writeHead(200, {
