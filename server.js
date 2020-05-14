@@ -4,7 +4,7 @@ const getStat = require("util").promisify(fs.stat);
 
 // Скачивание и настройки
 const { download, convert, randomImage } = require("./utils");
-const settings = JSON.parse(fs.readFileSync("response.json"));
+const settings = JSON.parse(fs.readFileSync("settings.json"));
 
 // https://www.npmjs.com/package/sqlite3
 const sqlite3 = require("sqlite3").verbose();
@@ -13,37 +13,35 @@ const exists = fs.existsSync(dbFile);
 const db = new sqlite3.Database(dbFile);
 
 // https://telegraf.js.org/#/
-//
 const { Telegraf, Extra, Markup } = require("telegraf"); // telegram bot
 const Telegram = require("telegraf/telegram"); // telegram
 const bot = new Telegraf(process.env.TOKEN);
 const telegram = new Telegram(process.env.TOKEN);
 
-// app.use(bot.webhookCallback('/secret-path'))
-// bot.telegram.setWebhook('https://instinctive-autumn-velvet.glitch.me/secret-path')
-
+// https://expressjs.com/ru
 const express = require("express");
 const bodyParser = require("body-parser");
 const app = express();
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.static("public"));
+app.use(express.static(".data"));
 app.set("view engine", "pug");
-// app.use(bot.webhookCallback('/secret-path'))
-// bot.telegram.setWebhook('https://instinctive-autumn-velvet.glitch.me/secret-path')
-
 
 //Клавиатуры
 const {
   menuKeyboard,
   menuKeyboardWithOutSend,
+  exitKeyboardwithAudio,
+  menuReEnter,
   exitKeyboard,
   agreementKey,
   randomizeKey,
   ranomizeVoice
 } = require("./keyboards");
 
-// Ссессия
+// Сессия
 const session = require("telegraf-session-sqlite");
 const options = {
   db: db,
@@ -69,11 +67,11 @@ db.serialize(() => {
 
 // Cцена старта
 const greeterScene = new Scene("greeter");
-
 stage.register(greeterScene);
 
 greeterScene.enter(ctx => {
   //console.log(ctx.scene.state);
+  ctx.replyWithChatAction("typing");
   ctx.replyWithHTML(`Привет, ${ctx.chat.first_name}!\n`);
   ctx.replyWithChatAction("typing");
   let i = 0;
@@ -84,18 +82,18 @@ greeterScene.enter(ctx => {
     i++;
     if (i === settings.bot.start.length) {
       clearInterval(interval);
-      ctx.replyWithChatAction("typing");
-      ctx.replyWithHTML(settings.bot.agree, agreementKey);
+      ctx.replyWithChatAction("typing").then(() => {
+        ctx.replyWithHTML(settings.bot.agree, agreementKey);
+      });
     }
   }, settings.bot.startDelay[i]);
 });
 
 greeterScene.action("agree", ctx => {
   ctx.scene.enter("root");
-  ctx.scene.state.agree = "yes";
+  //ctx.scene.state.agree = "yes";
   ctx.answerCbQuery(`🎉 Cупер! 🎉`);
   ctx.editMessageText(settings.bot.agree);
-
   ctx.reply(
     "Cпасибо! теперь вы можете отправлять свои озвученые нотации 🎼",
     menuKeyboard
@@ -106,8 +104,12 @@ greeterScene.action("agree", ctx => {
 //   ctx.answerCbQuery(`☹️ Очень жаль! ☹️`);
 // //    ctx.telegram.leaveChat(ctx.message.chat.id)
 // });
+
 greeterScene.command("restart", ctx => {
-  ctx.scene.enter("greeter");
+  ctx.scene.reenter("greeter");
+});
+greeterScene.command("start", ctx => {
+  ctx.scene.reenter("greeter");
 });
 
 greeterScene.hears("exit", ctx => {
@@ -116,167 +118,264 @@ greeterScene.hears("exit", ctx => {
 
 greeterScene.on(["text", "media", "sticker"], ctx => {
   // telegram.deleteMessage(ctx.chat.id, ctx.update.message.message_id);
-  ctx.reply("Пожалуйста ответьте на пользовательское соглашение");
+  // ctx.reply("Пожалуйста согласитесь на то что вы даете право использовать ваши аудиосообщения",menuKeyboard);
+  ctx.scene.enter("root");
+  ctx.reply("Хорошо!", menuKeyboard);
 });
 
+// Cцена отправки аудио нотации
 const sendVoice = new Scene("sendVoice");
-
 stage.register(sendVoice);
-
-// Отправка случайной графической нотации
 
 sendVoice.enter((ctx, next) => {
   //telegram.deleteMessage(ctx.chat.id, ctx.update.message.message_id);
+  ctx.scene.state.send = false;
   ctx.replyWithChatAction("upload_photo");
   const partiture = settings.partiture[randomImage(settings.partiture.length)];
   ctx.scene.state.image = partiture;
   ctx.replyWithPhoto({ url: partiture }, randomizeKey).then(() => {
-    ctx.reply("Теперь озвучьте партитуру.", exitKeyboard);
+    ctx.reply("Теперь озвучьте нотацию.", exitKeyboard);
   });
 });
 
 sendVoice.action("randomize", ctx => {
-  let partiture = settings.partiture[randomImage(settings.partiture.length)];
-  while (partiture === ctx.scene.state.image) {
-    partiture = settings.partiture[randomImage(settings.partiture.length)];
+  if (!ctx.scene.state.send) {
+    let partiture = settings.partiture[randomImage(settings.partiture.length)];
+    while (partiture === ctx.scene.state.image) {
+      partiture = settings.partiture[randomImage(settings.partiture.length)];
+    }
+    settings.partiture[randomImage(settings.partiture.length)];
+    ctx.scene.state.image = partiture;
+    ctx.answerCbQuery(`🎰🎼🎶`).then(() => {
+      ctx.editMessageMedia({ type: "photo", media: partiture }, randomizeKey);
+    });
+  } else {
+    ctx
+      .answerCbQuery(`Вы уже отправили аудио-сообщение с этой нотацией`)
+      .then(() => {
+        ctx.editMessageMedia({ type: "photo", media: ctx.scene.state.image });
+      });
   }
-  settings.partiture[randomImage(settings.partiture.length)];
-  ctx.scene.state.image = partiture;
-  ctx.answerCbQuery(`🎼Новая партитура🎶`).then(() => {
-    ctx.editMessageMedia({ type: "photo", media: partiture }, randomizeKey);
-  });
 });
 
 // Сохраняем file_id voice в bd если пришло сообщение
 // типа voice с duration > 1 и < 180  1сек 3мин
 sendVoice.on("voice", ctx => {
-  if (!process.env.DISALLOW_WRITE) {
-    if (ctx.message.voice.duration < 1) {
-      // меньше секунды
-      ctx.reply(settings.bot.error.duration_min);
-    }
-    if (ctx.message.voice.duration > 180) {
-      // больше 3 минут
-      ctx.reply(settings.bot.error.duration_max);
-    } else {
-      db.run(
-        settings.sql.addVoice,
-        ctx.message.voice.file_id,
-        ctx.scene.state.image,
-        parseInt(ctx.message.voice.duration),
-        error => {
-          if (error) {
-            ctx.reply(settings.bot.error.db);
-          } else {
-            ctx.scene.state.voice = ctx.message.voice.file_id;
-            //console.log(ctx.scene.state);
-            ctx.reply(
-              settings.bot.save,
-              Extra.HTML().markup(m =>
-                m.inlineKeyboard([
-                  m.callbackButton(`@${ctx.from.username}`, "author"),
-                  m.callbackButton("aнонимно", "anonimous")
-                ])
-              )
-            );
+  if (!ctx.scene.state.send) {
+    if (!process.env.DISALLOW_WRITE) {
+      if (ctx.message.voice.duration < 1) {
+        // меньше секунды
+        ctx.reply(settings.bot.error.duration_min, exitKeyboard);
+      } else if (ctx.message.voice.duration > 180) {
+        // больше 3 минут
+        ctx.reply(settings.bot.error.duration_max, exitKeyboard);
+      } else {
+        ctx.scene.state.send = true;
+        ctx.scene.state.listen = "";
+        db.run(
+          settings.sql.addVoice,
+          ctx.message.voice.file_id,
+          ctx.scene.state.image,
+          parseInt(ctx.message.voice.duration),
+          error => {
+            if (error) {
+              ctx.reply(settings.bot.error.db);
+            } else {
+              ctx.scene.state.voice = ctx.message.voice.file_id;
+              //console.log(ctx.scene.state);
+              ctx.reply(
+                settings.bot.save,
+                Extra.HTML().markup(m =>
+                  m.inlineKeyboard([
+                    m.callbackButton(`@${ctx.from.username}`, "author"),
+                    m.callbackButton("aнонимно", "anonimous")
+                  ])
+                )
+              );
+            }
           }
-        }
-      );
+        );
+      }
     }
+  } else {
+    ctx.reply(
+      "Вы уже записали аудио-сообщение, хотите записать еще одно?",
+      menuReEnter
+    );
   }
+});
+
+sendVoice.action("reEnter", ctx => {
+  ctx.scene.reenter("greeter");
 });
 
 sendVoice.action("author", ctx => {
   db.run(settings.sql.addAuthorVoice, ctx.from.username, ctx.scene.state.voice);
   ctx.answerCbQuery(`🎉🎉🎉`);
   ctx.editMessageText(settings.bot.save);
-  ctx.scene.enter("root");
-  ctx.reply("Cупер! опубликовали запись от вашего имени! 🙃", menuKeyboard);
+  //ctx.scene.enter("root");
+  const textreply = "Cупер!🙃 опубликовали запись от вашего имени!\n";
+  // ctx.reply(
+  //   "Cупер!🙃 опубликовали запись от вашего имени!\nПосмотрите какие есть у нас записанные сообщения с этой графической нотацией ",
+  //   exitKeyboard
+  // );
+  ctx.replyWithChatAction("upload_voice");
+  db.each(
+    `SELECT * FROM Voices WHERE image = '${ctx.scene.state.image}' AND voice != '${ctx.scene.state.voice}' ORDER BY RANDOM() LIMIT 1;`, //AND username !=${ctx.from.username}
+    (err, row) => {
+      //console.log(row);
+      if (row) {
+        console.log(row);
+        ctx.replyWithChatAction("upload_voice");
+        ctx.scene.state.listen = row.id;
+        ctx
+          .reply(
+            textreply +
+              "Посмотрите какие есть у нас записанные сообщения с этой графической нотацией",
+            exitKeyboardwithAudio
+          )
+          .then(() => {
+            ctx.replyWithPhoto({ url: ctx.scene.state.image }).then(() => {
+              ctx.replyWithVoice(row.voice, {
+                caption: row.username ? `@${row.username}` : " " //settings.bot.voice.text,
+              });
+            });
+          });
+
+        //console.log(ctx.scene.state);
+      } else {
+        ctx.reply(
+          textreply +
+            "У нас еще нету записей кроме вашей для этой графической нотации"
+        );
+      }
+    }
+  );
 });
 
 sendVoice.action("anonimous", ctx => {
   ctx.answerCbQuery(`🕶🕶🕶`);
   ctx.editMessageText(settings.bot.save);
-  ctx.scene.enter("root");
-  ctx.reply("Хорошо опубликовали вашу запись анонимно 😎", menuKeyboard);
+  const replyAn = "Хорошо, опубликовали вашу запись анонимно 😎";
+
+  db.get(
+    `SELECT * FROM Voices WHERE image = '${ctx.scene.state.image}' AND voice != '${ctx.scene.state.voice}' ORDER BY RANDOM() LIMIT 1;`,
+    (err, row) => {
+      if (row) {
+        ctx.replyWithChatAction("upload_voice");
+        ctx.scene.state.listen = row.id;
+        ctx
+          .reply(
+            replyAn +
+              "Посмотрите какие есть у нас записанные сообщения с этой графической нотацией",
+            exitKeyboardwithAudio
+          )
+          .then(() => {
+            ctx.replyWithPhoto({ url: ctx.scene.state.image }).then(() => {
+              ctx.replyWithVoice(row.voice, {
+                caption: row.username ? `@${row.username}` : " " //settings.bot.voice.text,
+              });
+            });
+          });
+
+        //console.log(ctx.scene.state);
+      } else {
+        ctx.reply(
+          replyAn +
+            "У нас еще нету записей кроме вашей для этой графической нотации"
+        );
+      }
+    }
+  );
 });
 
+sendVoice.hears("Еще одно аудиосообщение", ctx => {
+  //console.log(ctx.scene.state.send);
+  if (ctx.scene.state.send) {
+    const req = `SELECT * FROM Voices WHERE image = '${ctx.scene.state.image}' AND id != ${ctx.scene.state.listen} ORDER BY RANDOM() LIMIT 1;`;
+    //console.log(req);
+    db.get(req, (err, row) => {
+      if (err) {
+        throw err;
+      }
+      if (row) {
+        ctx.scene.state.listen =
+          ctx.scene.state.listen + ` AND id != ${row.id}`;
+        ctx.replyWithPhoto({ url: ctx.scene.state.image },exitKeyboardwithAudio).then(() => {
+              ctx.replyWithVoice(row.voice, {
+                caption: row.username ? `@${row.username}` : " " //settings.bot.voice.text,
+              });
+            });
+      } else {
+        ctx.reply(
+          "Кажется сообщения закончились но вы можете посмотреть другие в главном меню или записать еще одно на другую графическую нотацию",
+          exitKeyboard
+        );
+      }
+    });
+  } else {
+    ctx.reply(
+      "Cначала отправьте аудио-сообщение что бы получить другие на такую же графическую нотацию",
+      exitKeyboard
+    );
+  }
+});
 sendVoice.hears(settings.bot.keyboard.mainMenu, ctx => {
   ctx.scene.enter("root");
   ctx.reply("Главное меню", menuKeyboard);
 });
 
 sendVoice.on(["text", "media", "sticker", "document"], ctx => {
-  //telegram.deleteMessage(ctx.chat.id, ctx.update.message.message_id);
-  ctx.reply("Пожалуйста отправьте голосовое сообщение", exitKeyboard);
+  if (ctx.scene.state.send) {
+    ctx.reply(
+      "Вы уже записали аудио-сообщение, хотите записать еще одно?",
+      menuReEnter
+    );
+  } else {
+    //telegram.deleteMessage(ctx.chat.id, ctx.update.message.message_id);
+    ctx.reply("Пожалуйста отправьте голосовое сообщение", exitKeyboard);
+  }
 });
-
-const getVoice = new Scene("getVoice");
-stage.register(getVoice);
 
 const rootScene = new Scene("root");
 stage.register(rootScene);
+
+rootScene.enter(ctx => {
+  //ctx.reply("Привет!")  ///
+  //ctx.scene.state.agree  = agree;
+});
 
 // Отправка случайного войса
 rootScene.hears(settings.bot.keyboard.randomVoice, (ctx, next) => {
   ctx.replyWithChatAction("upload_voice");
   ctx.scene.state.media ? false : ctx.scene.state.media;
-  const sql = `SELECT * FROM Voices WHERE image IS NOT NULL ${ctx.scene.state.media ? "AND id != "+ ctx.scene.state.media : " "} ORDER BY RANDOM() LIMIT 1;`;
-  db.each( sql, (err, row) => { 
+  const sql = `SELECT * FROM Voices WHERE image IS NOT NULL ${
+    ctx.scene.state.media ? "AND id != " + ctx.scene.state.media : " "
+  } ORDER BY RANDOM() LIMIT 1;`;
+  db.each(sql, (err, row) => {
     ctx.scene.state.media = row.id;
     // ctx.reply("Cлучайная запись",menuKeyboard)
-    ctx.replyWithPhoto({ url: row.image })
-      .then(() => {
-        ctx.replyWithVoice(row.voice,{
-          caption: row.username ? `@${row.username}` : " ", //settings.bot.voice.text,
-        })
+    ctx.replyWithPhoto({ url: row.image }).then(() => {
+      ctx.replyWithVoice(row.voice, {
+        caption: row.username ? `@${row.username}` : " " //settings.bot.voice.text,
       });
+    });
     // console.log(`Send ${row.voice} to ${ctx.chat.first_name} ${ctx.chat.last_name}`);
   });
 });
 
-// rootScene.on(["photo", "document"], ctx => {
-//   //console.log(ctx.message);
+// Костыль
+rootScene.action("randomize", ctx => {
+  ctx.answerCbQuery(`Упс а это мы еще не продумали...`);
+  ctx.editMessageMedia({ type: "photo", media: settings.partiture[0] });
+});
 
-//   if (!process.env.DISALLOW_WRITE) {
-//     // Если прислали картинку
-//     if (ctx.message.photo) {
-//       const lastImage = ctx.message.photo.length - 1;
-//       if (
-//         ctx.message.photo[lastImage].width < 200 ||
-//         ctx.message.photo[lastImage].height < 200
-//       ) {
-//         ctx.reply(settings.bot.error.photo_small, menuKeyboard);
-//       } else {
-//         console.log(ctx.message.from.username);
-//         console.log(ctx.message.photo[lastImage].file_id);
-//         if (ctx.message.caption) {
-//           console.log(ctx.message.caption);
-//         }
-//         ctx.reply("Спасибо!", menuKeyboard);
-//       }
-//     }
-//     if (ctx.message.document) {
-//       console.log(ctx.message);
-//       if (
-//         ctx.message.document.mime_type === "image/jpeg" ||
-//         ctx.message.document.mime_type === "image/png" ||
-//         ctx.message.document.mime_type === "image/jpg"
-//       ) {
-//         if (
-//           ctx.message.document.thumb.width < 200 ||
-//           ctx.message.document.thumb.width < 200
-//         ) {
-//           ctx.reply(settings.bot.error.photo_small, menuKeyboard);
-//         } else {
-//           ctx.reply("Спасибо!", menuKeyboard);
-//         }
-//       }
-//     }
-//   }
-// });
-
-
+rootScene.action("agree", ctx => {
+  ctx.scene.enter("root");
+  //ctx.scene.state.agree = "yes";
+  ctx.answerCbQuery(`🎉 Cупер! 🎉`);
+  ctx.editMessageText(settings.bot.agree);
+});
 
 rootScene.enter(ctx => {
   // console.log(ctx);
@@ -297,14 +396,14 @@ rootScene.hears(settings.bot.keyboard.why, ctx => {
 rootScene.hears("dice", ctx => ctx.replyWithDice(ctx.chat.id, menuKeyboard));
 rootScene.on(["sticker"], ctx => ctx.reply("Крутой стикер!", menuKeyboard));
 
-
 rootScene.hears(settings.bot.keyboard.partiture, ctx =>
   ctx.scene.enter("sendVoice")
 );
-rootScene.command("start",ctx => ctx.scene.enter("greeter"));
+rootScene.command("start", ctx => ctx.scene.enter("greeter"));
 
-
-rootScene.on("text", ctx => ctx.reply("Круто! но я ничего не понял",menuKeyboard));
+rootScene.on("text", ctx =>
+  ctx.reply("Круто! но я ничего не понял", menuKeyboard)
+);
 
 bot.use(session(options));
 bot.use(stage.middleware(options));
@@ -324,11 +423,6 @@ bot.startPolling();
 bot.launch();
 
 /// Сервер
-//bot.telegram.setWebhook('https://instinctive-autumn-velvet.glitch.me/secret-path')
-// bot.telegram.startWebhook('/secret-path', null, 3000);
-
-// https://expressjs.com/ru
-// Сервер
 
 /// Главная страница
 app.get("/", (req, res) => {
@@ -350,11 +444,13 @@ app.get("/randomize", (req, res) => {
   });
 });
 
-
 /// Получаем все партитуры и ссылки на них для прослушивания
 /// Что бы прослушать надо открыть страницу через vpn так как
 /// там идет скачиваение из апи телеги я рекомендую браузер опера
+
+/// Используется пока как wakeup
 app.get("/voices", (req, res) => {
+  res.header("Access-Control-Allow-Origin", "*");
   // console.log(req.headers);
   res.send("ok!");
 });

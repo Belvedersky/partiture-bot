@@ -1,6 +1,6 @@
 const fs = require("fs");
 const { Extra, Markup } = require("telegraf"); // telegram bot
-const settings = JSON.parse(fs.readFileSync("response.json"));
+const settings = JSON.parse(fs.readFileSync("settings.json"));
 
 // Клавиатуры
 
@@ -23,12 +23,10 @@ exports.menuKeyboardWithOutSend = Markup.keyboard([
 
 exports.agreementKey = Extra.HTML().markup(m =>
   m.inlineKeyboard([
-    m.callbackButton("✅", "agree"),
+    m.callbackButton("✅ Да готов!", "agree")
     // m.callbackButton("❌", "disagree")
   ])
 );
-
-
 
 exports.randomizeKey = Extra.load({ caption: settings.bot.partiture.text })
   .markdown()
@@ -45,3 +43,14 @@ exports.exitKeyboard = Markup.keyboard([settings.bot.keyboard.mainMenu])
   .removeKeyboard(true)
   .resize()
   .extra();
+
+exports.exitKeyboardwithAudio = Markup.keyboard(["Еще одно аудиосообщение", settings.bot.keyboard.mainMenu])
+  .removeKeyboard(true)
+  .resize()
+  .extra();
+
+exports.menuReEnter = Extra.HTML().markup(m =>
+  m.inlineKeyboard([
+    m.callbackButton("Записать другуое аудиосообщение 🎼", "reEnter")
+  ])
+);
