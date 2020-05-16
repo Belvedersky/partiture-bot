@@ -1,5 +1,6 @@
 dependencies:
   express: 4.17.1
+  mediaserver: 0.1.1
   pug: 2.0.4
   sqlite3: 4.2.0
   telegraf: 3.38.0
@@ -581,6 +582,12 @@ packages:
       node: '>= 0.6'
     resolution:
       integrity: sha1-hxDXrwqmJvj/+hzgAWhUUmMlV0g=
+  /mediaserver/0.1.1:
+    dev: false
+    engines:
+      node: '>= 0.10.0'
+    resolution:
+      integrity: sha512-+Gpdjzxp8n3v4lUnvLzepimasnrjHdjNVqcvD/U9nhUkuYNkUp3AbenHoePBEFheqS/WL5j9Mk0V4tjAHLnIpw==
   /merge-descriptors/1.0.1:
     dev: false
     resolution:
@@ -1285,6 +1292,7 @@ shrinkwrapMinorVersion: 9
 shrinkwrapVersion: 3
 specifiers:
   express: ^4.17.1
+  mediaserver: ^0.1.1
   pug: ^2.0.4
   sqlite3: ^4.2.0
   telegraf: ^3.38.0

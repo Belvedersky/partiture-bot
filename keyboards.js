@@ -23,7 +23,7 @@ exports.menuKeyboardWithOutSend = Markup.keyboard([
 
 exports.agreementKey = Extra.HTML().markup(m =>
   m.inlineKeyboard([
-    m.callbackButton("✅ Да готов!", "agree")
+    m.callbackButton(settings.bot.keyboard.ready, "agree")
     // m.callbackButton("❌", "disagree")
   ])
 );
@@ -31,12 +31,12 @@ exports.agreementKey = Extra.HTML().markup(m =>
 exports.randomizeKey = Extra.load({ caption: settings.bot.partiture.text })
   .markdown()
   .markup(m =>
-    m.inlineKeyboard([m.callbackButton("Получить другую ✨", "randomize")])
+    m.inlineKeyboard([m.callbackButton(settings.bot.keyboard.randomize, "randomize")])
   );
 
 exports.ranomizeVoice = Extra.HTML().markup(m =>
   m.inlineKeyboard([
-    m.callbackButton("Получить другуое аудиосообщение", "ranomizeVoice")
+    m.callbackButton(settings.bot.keyboard.anotherMessage, "ranomizeVoice")
   ])
 );
 exports.exitKeyboard = Markup.keyboard([settings.bot.keyboard.mainMenu])
@@ -44,13 +44,13 @@ exports.exitKeyboard = Markup.keyboard([settings.bot.keyboard.mainMenu])
   .resize()
   .extra();
 
-exports.exitKeyboardwithAudio = Markup.keyboard(["Еще одно аудиосообщение", settings.bot.keyboard.mainMenu])
+exports.exitKeyboardwithAudio = Markup.keyboard([settings.bot.keyboard.replyWithOther, settings.bot.keyboard.mainMenu])
   .removeKeyboard(true)
   .resize()
   .extra();
 
 exports.menuReEnter = Extra.HTML().markup(m =>
   m.inlineKeyboard([
-    m.callbackButton("Записать другуое аудиосообщение 🎼", "reEnter")
+    m.callbackButton(settings.bot.keyboard.recordOther, "reEnter")
   ])
 );

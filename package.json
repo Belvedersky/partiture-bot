@@ -11,7 +11,8 @@
     "pug": "^2.0.4",
     "sqlite3": "^4.2.0",
     "telegraf": "^3.38.0",
-    "telegraf-session-sqlite": "^1.0.1"
+    "telegraf-session-sqlite": "^1.0.1",
+    "mediaserver": "^0.1.1"
   },
   "engines": {
     "node": "12.x"

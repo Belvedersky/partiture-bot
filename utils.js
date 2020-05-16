@@ -26,9 +26,9 @@ const convert = command => {
     if (error) {
       throw error;
     }
-    // console.log("done");
-    // console.log("stdout: " + stdout);
-    // console.log(stderr);
+    //console.log("done");
+    console.log("stdout: " + stdout);
+    console.log(stderr);
   });
 };
 exports.convert = convert;
