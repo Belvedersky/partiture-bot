@@ -1,3 +1,1 @@
 # Telegram-bot Graphicscore
-
-[]

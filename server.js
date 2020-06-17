@@ -1,13 +1,15 @@
 // Для работы с файлами
 const fs = require("fs");
 const getStat = require("util").promisify(fs.stat);
+const child_process = require('child_process');
 
 // Скачивание и настройки
 const { download, convert, randomImage } = require("./utils");
 const settings = JSON.parse(fs.readFileSync("settings.json"));
 
 // https://www.npmjs.com/package/sqlite3
-const sqlite3 = require("sqlite3").verbose();
+const sqlite3 = require('sqlite3').verbose();
+//console.log(sqlite3);
 const dbFile = process.env.DB;
 const exists = fs.existsSync(dbFile);
 const db = new sqlite3.Database(dbFile);
@@ -74,9 +76,6 @@ greeterScene.enter(ctx => {
   let interval = setInterval(function() {
     ctx
       .replyWithHTML(settings.bot.start[i])
-      .catch(err => {
-        console.log(err);
-      })
       .then(() => {
         ctx.replyWithChatAction("typing");
       });
@@ -85,9 +84,6 @@ greeterScene.enter(ctx => {
       clearInterval(interval);
       ctx
         .replyWithChatAction("typing")
-        .catch(err => {
-          console.log(err);
-        })
         .then(() => {
           ctx.replyWithHTML(settings.bot.agree, agreementKey);
         });
@@ -135,9 +131,6 @@ sendVoice.enter((ctx, next) => {
   ctx.scene.state.image = partiture;
   ctx
     .replyWithPhoto(partiture, randomizeKey)
-    .catch(err => {
-      console.log(err);
-    })
     .then(() => {
       ctx.reply(settings.bot.vocalize, exitKeyboard);
     });
@@ -153,18 +146,12 @@ sendVoice.action("randomize", ctx => {
     ctx.scene.state.image = partiture;
     ctx
       .answerCbQuery(`🎰🎼🎶`)
-      .catch(err => {
-        console.log(err);
-      })
       .then(() => {
         ctx.editMessageMedia({ type: "photo", media: partiture }, randomizeKey);
       });
   } else {
     ctx
       .answerCbQuery(`Вы уже отправили аудио-сообщение с этой нотацией`)
-      .catch(err => {
-        console.log(err);
-      })
       .then(() => {
         ctx.editMessageMedia({ type: "photo", media: ctx.scene.state.image });
       });
@@ -241,15 +228,9 @@ sendVoice.action("author", ctx => {
              settings.bot.watchSound,
             exitKeyboardwithAudio
           )
-          .catch(err => {
-            console.log(err);
-          })
           .then(() => {
             ctx
               .replyWithPhoto(ctx.scene.state.image)
-              .catch(err => {
-                console.log(err);
-              })
               .then(() => {
                 ctx.replyWithVoice(row.voice, {
                   caption: row.username ? `@${row.username}` : " " //settings.bot.voice.text,
@@ -274,24 +255,18 @@ sendVoice.action("anonimous", ctx => {
     (err, row) => {
       if (row) {
         ctx.replyWithChatAction("upload_voice");
+        console.log(row.id);
         ctx.scene.state.listen = row.id;
+        console.log(ctx.scene.state.listen);
         ctx
           .reply(
             settings.bot.ReplyAnonymously +
               settings.bot.watchSound,
             exitKeyboardwithAudio
-          )
-          
-          .catch(err => {
-            console.log(err);
-          })
-          .then(() => {
+          ).then(() => {
           ctx.replyWithChatAction("upload_voice");
             ctx
               .replyWithPhoto(ctx.scene.state.image)
-              .catch(err => {
-                console.log(err);
-              })
               .then(() => {
                 ctx.replyWithVoice(row.voice, {
                   caption: row.username ? `@${row.username}` : " " //settings.bot.voice.text,
@@ -313,7 +288,9 @@ sendVoice.hears("Еще одно аудиосообщение", ctx => {
   //console.log(ctx.scene.state.send);
   if (ctx.scene.state.send) {
     //console.log(req);
-    db.get(`SELECT * FROM Voices WHERE image = '${ctx.scene.state.image}' AND id != ${ctx.scene.state.listen} ORDER BY RANDOM() LIMIT 1;`, (err, row) => {
+    const req = `SELECT * FROM Voices WHERE image = "${ctx.scene.state.image}" AND id != ${ctx.scene.state.listen} ORDER BY RANDOM() LIMIT 1;`;
+    console.log(req);
+    db.get(req, (err, row) => {
       if (err) {
         throw err;
       }
@@ -372,6 +349,7 @@ imageLoad.hears(settings.bot.keyboard.mainMenu, ctx => {
 });
 
 imageLoad.enter(ctx => {
+  console.log(ctx.chat.id);
   ctx.reply("Привет! отправь мне графическую нотацию, не документом! по одной, за раз",exitKeyboard);  ///
   //ctx.scene.state.agree  = agree;
 });
@@ -420,9 +398,6 @@ rootScene.hears(settings.bot.keyboard.randomVoice, (ctx, next) => {
     // ctx.reply("Cлучайная запись",menuKeyboard)
     ctx
       .replyWithPhoto(row.image)
-      .catch(err => {
-        console.log(err);
-      })
       .then(() => {
         ctx.replyWithVoice(row.voice, {
           caption: row.username ? `@${row.username}` : " " //settings.bot.voice.text,
@@ -515,9 +490,6 @@ app.get("/randomize", (req, res) => {
   db.each(settings.sql.randomVoice, (err, row) => {
     telegram
       .getFileLink(row.voice)
-      .catch(err => {
-        console.log(err);
-      })
       .then(voiceLink => {
         download(voiceLink, "public/voice.oga", () => {
           convert(settings.convert + "webm"); // конверт в webm, некоторые браузеры не понимают .oga
@@ -544,6 +516,30 @@ app.get("/util", (req, res) => {
   db.run("UPDATE Voices SET downloaded = 0 WHERE downloaded = 1;");
   res.send("ok!");
 });
+
+app.get("/users", (req, res) => {
+  // db.run("CREATE TABLE Paritures (id INTEGER PRIMARY KEY AUTOINCREMENT, image TEXT)");
+  
+  db.all("SELECT * FROM Session", async (err, rows) => {
+    let result=[];
+    if (err) {
+       throw err;
+    }
+    rows.forEach(async (row) => {
+      const id = row.id.split(":")[0];
+      result.push(id);
+      // await telegram.sendMessage(id, settings.bot.reply)
+    })
+    //console.log(result);
+    res.json({
+      all: result.length,
+      users:result});
+    //https://instinctive-autumn-velvet.glitch.me/users
+  });
+  
+  
+});
+
 //SELECT COUNT(*) FROM `table`
 
 // app.get("/stat", (req, res) => {
@@ -648,6 +644,14 @@ app.get("/util", (req, res) => {
 /// Трансляция аудио –– можно скачивать из телеграмма и отправлять последовательно
 /// http://cangaceirojavascript.com.br/streaming-audio-node/
 const buffer = settings.stream.buffer;
+
+
+// какой смысл только
+// app.get("/npm",async(req,res)=>{
+//   child_process.exec("npm install",()=>{
+//     res.send('done!');
+//   })
+// })
 
 app.get("/audio", async (req, res) => {
   const filePath = `${__dirname}/public/voice.oga`;
